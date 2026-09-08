@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Vendas - Cantina</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Supabase JS Client via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <!-- TELA DE AUTENTICAÇÃO (LOGIN / CADASTRO) -->
+<div id="auth-container" class="auth-container">
+  <div class="auth-card">
+    <div class="logo">
+      <img src="img/logo_cura.png" alt="Logo CURA Cantina" class="logo-img">
+      <h1>CURA - Cantina</h1>
+    </div>
+    
+    <!-- FORMULÁRIO DE LOGIN -->
+    <form id="form-login" onsubmit="handleLogin(event)">
+      <center><h2>Entrar no Sistema</h2></center>
+      <input type="email" id="login-email" placeholder="Seu E-mail" required>
+      <input type="password" id="login-senha" placeholder="Sua Senha" required>
+      <button type="submit" class="btn btn-primary">Entrar</button>
+      <p class="auth-toggle">Não tem uma conta? <a href="javascript:void(0)" onclick="toggleAuth('cadastro')">Cadastre-se</a></p>
+    </form>
+
+    <!-- FORMULÁRIO DE CADASTRO (FICA ESCONDIDO ATÉ O CLIQUE) -->
+    <form id="form-cadastro" class="hidden" onsubmit="handleCadastro(event)">
+      <center><h2>Criar Nova Conta</h2></center>
+      <input type="text" id="cad-nome" placeholder="Seu Nome Completo" required>
+      <input type="email" id="cad-email" placeholder="Seu E-mail" required>
+      <input type="password" id="cad-senha" placeholder="Sua Senha (mín. 6 caracteres)" minlength="6" required>
+      <input type="password" id="cad-codigo" placeholder="Código de Gerente (opcional)">
+      <small class="hint">Se você possui o código de gerente, insira acima. Caso contrário, sua conta será de Vendedor.</small>
+      <button type="submit" class="btn btn-success">Cadastrar</button>
+      <p class="auth-toggle">Já tem conta? <a href="javascript:void(0)" onclick="toggleAuth('login')">Fazer Login</a></p>
+    </form>
+  </div>
+</div>
+
+      <!-- FORMULÁRIO DE CADASTRO -->
+      <form id="form-cadastro" class="hidden" onsubmit="handleCadastro(event)">
+        <h2>Criar Nova Conta</h2>
+        <input type="text" id="cad-nome" placeholder="Seu Nome Completo" required>
+        <input type="email" id="cad-email" placeholder="Seu E-mail" required>
+        <input type="password" id="cad-senha" placeholder="Sua Senha (mín. 6 caracteres)" minlength="6" required>
+        <input type="password" id="cad-codigo" placeholder="Código de Gerente (opcional)">
+        <small class="hint">Se você possui a chave de gerente, insira acima. Caso contrário, sua conta será de Vendedor.</small>
+        <button type="submit" class="btn btn-success">Cadastrar</button>
+        <p class="auth-toggle">Já tem conta? <a href="#" onclick="toggleAuth('login')">Fazer Login</a></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- APLICAÇÃO PRINCIPAL (EXIBIDA APÓS O LOGIN) -->
+  <div id="app-container" class="app-container hidden">
+    
+    <!-- CABEÇALHO -->
+    <header class="navbar">
+      <div class="nav-brand">🍿 CURA - Cantina</div>
+      <div class="nav-user">
+        <span id="user-display">Usuário: ...</span>
+        <span id="badge-perfil" class="badge">...</span>
+        <button onclick="handleLogout()" class="btn btn-logout">Sair</button>
+      </div>
+    </header>
+
+    <!-- MENU DE NAVEGAÇÃO INTERNA (SE FOR GERENTE) -->
+    <nav id="nav-gerente" class="sub-nav hidden">
+      <button class="nav-btn active" onclick="trocarAba('vendas')">🛒 Ponto de Venda</button>
+      <button class="nav-btn" onclick="trocarAba('relatorio')">📊 Relatório Diário</button>
+    </nav>
+
+    <main class="main-content">
+
+      <!-- ABA 1: PONTO DE VENDA (PDV) -->
+      <section id="aba-vendas" class="tab-content">
+        <div class="card pdv-card">
+          <h2>🛒 Registrar Venda</h2>
+          
+          <form id="form-venda" onsubmit="registrarVenda(event)">
+            <div class="form-group">
+              <label for="select-categoria">1. Categoria:</label>
+              <select id="select-categoria" onchange="filtrarProdutosPorCategoria()">
+                <option value="todas">Todas as Categorias</option>
+                <option value="salgado">Salgados</option>
+                <option value="doce">Doces</option>
+                <option value="refrigerante">Refrigerantes</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="select-produto">2. Item Vendido:</label>
+              <select id="select-produto" required onchange="atualizarValores()">
+                <option value="">Carregando produtos...</option>
+              </select>
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="input-qtd">Quantidade:</label>
+                <input type="number" id="input-qtd" value="1" min="1" required oninput="atualizarValores()">
+              </div>
+
+              <div class="form-group">
+                <label>Valor Unitário:</label>
+                <input type="text" id="valor-unitario" value="R$ 0,00" readonly class="input-readonly">
+              </div>
+            </div>
+
+            <div class="total-box">
+              <span>Valor Total:</span>
+              <strong id="valor-total">R$ 0,00</strong>
+            </div>
+
+            <button type="submit" id="btn-finalizar" class="btn btn-success btn-block">Confirmar Venda</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- ABA 2: RELATÓRIO DIÁRIO (EXCLUSIVO PARA GERENTE) -->
+      <section id="aba-relatorio" class="tab-content hidden">
+        <div class="header-relatorio">
+          <h2>📊 Relatório de Vendas do Dia</h2>
+          <input type="date" id="filtro-data" onchange="carregarRelatorioDiario()">
+        </div>
+
+        <!-- CARDS DE RESUMO -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <h3>Faturamento Total</h3>
+            <p id="kpi-faturamento">R$ 0,00</p>
+          </div>
+          <div class="kpi-card">
+            <h3>Qtd. Itens Vendidos</h3>
+            <p id="kpi-itens">0</p>
+          </div>
+          <div class="kpi-card">
+            <h3>Total de Transações</h3>
+            <p id="kpi-vendas">0</p>
+          </div>
+        </div>
+
+        <!-- RESUMO POR VENDEDOR -->
+        <div class="card">
+          <h3>Vendas por Vendedor</h3>
+          <ul id="lista-vendedores" class="vendedores-list">
+            <li>Carregando...</li>
+          </ul>
+        </div>
+
+        <!-- TABELA DE VENDAS DO DIA -->
+        <div class="card">
+          <h3>Histórico de Vendas</h3>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Horário</th>
+                  <th>Item</th>
+                  <th>Qtd</th>
+                  <th>Valor Unit.</th>
+                  <th>Total</th>
+                  <th>Vendedor</th>
+                </tr>
+              </thead>
+              <tbody id="tabela-vendas-corpo">
+                <tr><td colspan="6">Carregando relatório...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

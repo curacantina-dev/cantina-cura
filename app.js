@@ -1,0 +1,358 @@
+// CONFIGURAÇÃO DO SUPABASE
+const SUPABASE_URL = "https://pinonhsrrsfvyemlusbr.supabase.co";
+const SUPABASE_KEY = "sb_publishable_iq3dMg7U6zVz8vP6oSERYQ_nlXh7J_7";
+
+// Alterado de 'supabase' para 'supabaseClient' para evitar conflito
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// VARIÁVEIS GLOBAIS DE ESTADO
+let usuarioLogado = null;
+let perfilUsuario = null;
+let listaProdutos = [];
+
+// CHAVE SECRETA PARA CADASTRO DE GERENTE
+const CODIGO_GERENTE_SECRETO = "CANTINA2026";
+
+// INICIALIZAÇÃO DA APLICAÇÃO
+document.addEventListener("DOMContentLoaded", async () => {
+  const hoje = new Date().toISOString().split("T")[0];
+  const filtroData = document.getElementById("filtro-data");
+  if (filtroData) filtroData.value = hoje;
+
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (session) {
+    usuarioLogado = session.user;
+    await carregarPerfilEIniciar();
+  } else {
+    exibirTelaAuth();
+  }
+});
+
+// ALTERNA ENTRE LOGIN E CADASTRO
+function toggleAuth(modo) {
+  const formLogin = document.getElementById("form-login");
+  const formCadastro = document.getElementById("form-cadastro");
+
+  if (modo === "cadastro") {
+    formLogin.classList.add("hidden");
+    formCadastro.classList.remove("hidden");
+  } else {
+    formCadastro.classList.add("hidden");
+    formLogin.classList.remove("hidden");
+  }
+}
+
+// CADASTRO DE USUÁRIO
+async function handleCadastro(e) {
+  e.preventDefault();
+  const nome = document.getElementById("cad-nome").value;
+  const email = document.getElementById("cad-email").value;
+  const senha = document.getElementById("cad-senha").value;
+  const codigo = document.getElementById("cad-codigo").value;
+
+  const perfil = (codigo === CODIGO_GERENTE_SECRETO) ? "gerente" : "vendedor";
+
+  const { data, error } = await supabaseClient.auth.signUp({
+    email,
+    password: senha,
+  });
+
+  if (error) {
+    alert("Erro no cadastro: " + error.message);
+    return;
+  }
+
+  if (data.user) {
+    const { error: perfilError } = await supabaseClient.from("perfis").insert([
+      { id: data.user.id, nome: nome, perfil: perfil }
+    ]);
+
+    if (perfilError) console.error("Erro ao salvar perfil:", perfilError);
+
+    alert(`Cadastro realizado com sucesso como ${perfil.toUpperCase()}! Faça login.`);
+    toggleAuth("login");
+  }
+}
+
+// LOGIN DE USUÁRIO
+async function handleLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById("login-email").value;
+  const senha = document.getElementById("login-senha").value;
+
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: senha });
+
+  if (error) {
+    alert("Falha no login: " + error.message);
+    return;
+  }
+
+  usuarioLogado = data.user;
+  await carregarPerfilEIniciar();
+}
+
+// BUSCA O PERFIL DO USUÁRIO E CARREGA O PAINEL
+async function carregarPerfilEIniciar() {
+  const { data, error } = await supabaseClient
+    .from("perfis")
+    .select("nome, perfil")
+    .eq("id", usuarioLogado.id)
+    .single();
+
+  if (data) {
+    perfilUsuario = data;
+  } else {
+    perfilUsuario = { nome: usuarioLogado.email, perfil: "vendedor" };
+  }
+
+  document.getElementById("auth-container").classList.add("hidden");
+  document.getElementById("app-container").classList.remove("hidden");
+
+  document.getElementById("user-display").innerText = `Olá, ${perfilUsuario.nome}`;
+  const badge = document.getElementById("badge-perfil");
+  badge.innerText = perfilUsuario.perfil;
+  badge.className = `badge ${perfilUsuario.perfil}`;
+
+  if (perfilUsuario.perfil === "gerente") {
+    document.getElementById("nav-gerente").classList.remove("hidden");
+  }
+
+  await carregarProdutos();
+}
+
+// LOGOUT
+async function handleLogout() {
+  await supabaseClient.auth.signOut();
+  window.location.reload();
+}
+
+function exibirTelaAuth() {
+  document.getElementById("auth-container").classList.remove("hidden");
+  document.getElementById("app-container").classList.add("hidden");
+}
+
+// TABS DA INTERFACE
+function trocarAba(aba) {
+  document.querySelectorAll(".tab-content").forEach(el => el.classList.add("hidden"));
+  document.querySelectorAll(".nav-btn").forEach(el => el.classList.remove("active"));
+
+  if (aba === "vendas") {
+    document.getElementById("aba-vendas").classList.remove("hidden");
+    event.target.classList.add("active");
+  } else if (aba === "relatorio") {
+    document.getElementById("aba-relatorio").classList.remove("hidden");
+    event.target.classList.add("active");
+    carregarRelatorioDiario();
+  }
+}
+
+// NAVEGAÇÃO / LOGICA DE VENDAS
+async function carregarProdutos() {
+  const { data, error } = await supabaseClient.from("produtos").select("*").order("nome");
+  if (error) {
+    alert("Erro ao carregar produtos: " + error.message);
+    return;
+  }
+  listaProdutos = data;
+  filtrarProdutosPorCategoria();
+}
+
+function filtrarProdutosPorCategoria() {
+  const categoria = document.getElementById("select-categoria").value;
+  const selectProduto = document.getElementById("select-produto");
+  selectProduto.innerHTML = '<option value="">Selecione um item...</option>';
+
+  const filtrados = (categoria === "todas") 
+    ? listaProdutos 
+    : listaProdutos.filter(p => p.categoria === categoria);
+
+  filtrados.forEach(prod => {
+    const opt = document.createElement("option");
+    opt.value = prod.id;
+    opt.innerText = `${prod.nome} - R$ ${parseFloat(prod.preco_unitario).toFixed(2)}`;
+    opt.dataset.preco = prod.preco_unitario;
+    opt.dataset.nome = prod.nome;
+    opt.dataset.categoria = prod.categoria;
+    selectProduto.appendChild(opt);
+  });
+
+  atualizarValores();
+}
+
+function atualizarValores() {
+  const select = document.getElementById("select-produto");
+  const qtd = parseInt(document.getElementById("input-qtd").value) || 1;
+  const selectedOpt = select.options[select.selectedIndex];
+
+  if (selectedOpt && selectedOpt.dataset.preco) {
+    const precoUnit = parseFloat(selectedOpt.dataset.preco);
+    const total = precoUnit * qtd;
+
+    document.getElementById("valor-unitario").value = `R$ ${precoUnit.toFixed(2)}`;
+    document.getElementById("valor-total").innerText = `R$ ${total.toFixed(2)}`;
+  } else {
+    document.getElementById("valor-unitario").value = "R$ 0,00";
+    document.getElementById("valor-total").innerText = "R$ 0,00";
+  }
+}
+
+// REGISTRAR UMA NOVA VENDA
+async function registrarVenda(e) {
+  e.preventDefault();
+  const select = document.getElementById("select-produto");
+  const selectedOpt = select.options[select.selectedIndex];
+
+  if (!selectedOpt || !selectedOpt.value) {
+    alert("Selecione um produto válido!");
+    return;
+  }
+
+  const produtoId = selectedOpt.value;
+  const nomeProduto = selectedOpt.dataset.nome;
+  const categoria = selectedOpt.dataset.categoria;
+  const valorUnitario = parseFloat(selectedOpt.dataset.preco);
+  const quantidade = parseInt(document.getElementById("input-qtd").value);
+  const valorTotal = valorUnitario * quantidade;
+
+  const btn = document.getElementById("btn-finalizar");
+  btn.disabled = true;
+  btn.innerText = "Salvando...";
+
+  const novaVenda = {
+    produto_id: produtoId,
+    nome_produto: nomeProduto,
+    categoria: categoria,
+    quantidade: quantidade,
+    valor_unitario: valorUnitario,
+    valor_total: valorTotal,
+    vendedor_email: perfilUsuario.nome
+  };
+
+  const { error } = await supabaseClient.from("vendas").insert([novaVenda]);
+
+  btn.disabled = false;
+  btn.innerText = "Confirmar Venda";
+
+  if (error) {
+    alert("Erro ao registrar venda: " + error.message);
+  } else {
+    alert("Venda realizada com sucesso!");
+    document.getElementById("form-venda").reset();
+    atualizarValores();
+  }
+}
+
+// CARREGAR RELATÓRIO DIÁRIO
+async function carregarRelatorioDiario() {
+  const dataSelecionada = document.getElementById("filtro-data").value;
+  if (!dataSelecionada) return;
+
+  const inicioDia = `${dataSelecionada}T00:00:00.000Z`;
+  const fimDia = `${dataSelecionada}T23:59:59.999Z`;
+
+  const { data: vendas, error } = await supabaseClient
+    .from("vendas")
+    .select("*")
+    .gte("data_venda", inicioDia)
+    .lte("data_venda", fimDia)
+    .order("data_venda", { ascending: false });
+
+  if (error) {
+    console.error("Erro ao carregar relatórios:", error);
+    return;
+  }
+
+  let faturamentoTotal = 0;
+  let totalItens = 0;
+  const vendasPorVendedor = {};
+
+  const tabelaCorpo = document.getElementById("tabela-vendas-corpo");
+  tabelaCorpo.innerHTML = "";
+
+  if (vendas.length === 0) {
+    tabelaCorpo.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhuma venda registrada nesta data.</td></tr>';
+  }
+
+  vendas.forEach(v => {
+    faturamentoTotal += parseFloat(v.valor_total);
+    totalItens += v.quantidade;
+
+    if (!vendasPorVendedor[v.vendedor_email]) {
+      vendasPorVendedor[v.vendedor_email] = 0;
+    }
+    vendasPorVendedor[v.vendedor_email] += parseFloat(v.valor_total);
+
+    const hora = new Date(v.data_venda).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${hora}</td>
+      <td>${v.nome_produto}</td>
+      <td>${v.quantidade}</td>
+      <td>R$ ${parseFloat(v.valor_unitario).toFixed(2)}</td>
+      <td><strong>R$ ${parseFloat(v.valor_total).toFixed(2)}</strong></td>
+      <td>${v.vendedor_email}</td>
+    `;
+    tabelaCorpo.appendChild(tr);
+  });
+
+  document.getElementById("kpi-faturamento").innerText = `R$ ${faturamentoTotal.toFixed(2)}`;
+  document.getElementById("kpi-itens").innerText = totalItens;
+  document.getElementById("kpi-vendas").innerText = vendas.length;
+
+  const listaVendEl = document.getElementById("lista-vendedores");
+  listaVendEl.innerHTML = "";
+  
+  if (Object.keys(vendasPorVendedor).length === 0) {
+    listaVendEl.innerHTML = "<li>Nenhum registro.</li>";
+  } else {
+    for (const [vendedor, valor] of Object.entries(vendasPorVendedor)) {
+      const li = document.createElement("li");
+      li.innerHTML = `<span>👤 ${vendedor}</span> <strong>R$ ${valor.toFixed(2)}</strong>`;
+      listaVendEl.appendChild(li);
+    }
+  }
+}
+/* =========================================================
+   PROTEÇÃO DE TELA: BLOQUEIO DE BOTÃO DIREITO E ATALHOS F12
+   ========================================================= */
+
+// Bloqueia o menu de contexto (Botão Direito do Mouse)
+document.addEventListener("contextmenu", (e) => {
+  e.preventDefault();
+  return false;
+});
+
+// Bloqueia teclas de atalho do navegador (F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U, Ctrl+S)
+document.addEventListener("keydown", (e) => {
+  // Tecla F12
+  if (e.keyCode === 123 || e.key === "F12") {
+    e.preventDefault();
+    return false;
+  }
+
+  // Ctrl + Shift + I (Inspecionar)
+  // Ctrl + Shift + J (Console)
+  // Ctrl + Shift + C (Selecionar Elemento)
+  if (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67 || e.key === 'I' || e.key === 'J' || e.key === 'C')) {
+    e.preventDefault();
+    return false;
+  }
+
+  // Ctrl + U (Exibir código-fonte) e Ctrl + S (Salvar página)
+  if (e.ctrlKey && (e.keyCode === 85 || e.keyCode === 83 || e.key === 'u' || e.key === 's')) {
+    e.preventDefault();
+    return false;
+  }
+});
+
+// Anti-Debugging: Trava a execução se alguém conseguir abrir o Console do DevTools
+setInterval(() => {
+  const antes = performance.now();
+  debugger;
+  const depois = performance.now();
+  if (depois - antes > 100) {
+    // Se o DevTools estiver aberto, recarrega ou limpa a tela
+    window.location.reload();
+  }
+}, 1000);
