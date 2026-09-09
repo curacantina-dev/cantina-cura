@@ -85,27 +85,28 @@
               </select>
             </div>
 
+            <!-- FORMA DE PAGAMENTO EM RADIO BUTTONS -->
             <div class="form-group">
-  <label>3. Forma de Pagamento:</label>
-  <div class="radio-group" onchange="togglePixInfo()">
-    <label class="radio-option">
-      <input type="radio" name="forma_pagamento" value="Pix" required>
-      <span>Pix</span>
-    </label>
-    <label class="radio-option">
-      <input type="radio" name="forma_pagamento" value="Dinheiro" required>
-      <span>Dinheiro</span>
-    </label>
-    <label class="radio-option">
-      <input type="radio" name="forma_pagamento" value="Cartão de Débito" required>
-      <span>Cartão de Débito</span>
-    </label>
-    <label class="radio-option">
-      <input type="radio" name="forma_pagamento" value="Cartão de Crédito" required>
-      <span>Cartão de Crédito</span>
-    </label>
-  </div>
-</div>
+              <label>3. Forma de Pagamento:</label>
+              <div class="radio-group" onchange="togglePixInfo()">
+                <label class="radio-option">
+                  <input type="radio" name="forma_pagamento" value="Pix" required>
+                  <span>Pix</span>
+                </label>
+                <label class="radio-option">
+                  <input type="radio" name="forma_pagamento" value="Dinheiro">
+                  <span>Dinheiro</span>
+                </label>
+                <label class="radio-option">
+                  <input type="radio" name="forma_pagamento" value="Cartão de Débito">
+                  <span>Cartão de Débito</span>
+                </label>
+                <label class="radio-option">
+                  <input type="radio" name="forma_pagamento" value="Cartão de Crédito">
+                  <span>Cartão de Crédito</span>
+                </label>
+              </div>
+            </div>
 
             <!-- CAIXA INFORMATIVA DO PIX -->
             <div id="box-pix" class="pix-info hidden">
