@@ -361,9 +361,28 @@ async function carregarRelatorioDiario() {
     tabelaCorpo.appendChild(tr);
   });
 
+  // Atualiza os cards KPI
   document.getElementById("kpi-faturamento").innerText = `R$ ${faturamentoTotal.toFixed(2)}`;
   document.getElementById("kpi-itens").innerText = totalItens;
   document.getElementById("kpi-vendas").innerText = vendas.length;
+
+  // Renderiza o rodapé da tabela com o total do dia
+  const tabelaRodape = document.getElementById("tabela-vendas-rodape");
+  if (tabelaRodape) {
+    if (vendas.length === 0) {
+      tabelaRodape.innerHTML = "";
+    } else {
+      tabelaRodape.innerHTML = `
+        <tr style="background-color: #f8f9fa; font-weight: bold; border-top: 2px solid #ddd;">
+          <td colspan="2" style="text-align: right;">TOTAL:</td>
+          <td>${totalItens} un</td>
+          <td>-</td>
+          <td style="color: #2e7d32;">R$ ${faturamentoTotal.toFixed(2)}</td>
+          <td colspan="2"></td>
+        </tr>
+      `;
+    }
+  }
 
   // Renderiza Vendas por Vendedor
   const listaVendEl = document.getElementById("lista-vendedores");
