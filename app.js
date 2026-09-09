@@ -2,7 +2,6 @@
 const SUPABASE_URL = "https://pinonhsrrsfvyemlusbr.supabase.co";
 const SUPABASE_KEY = "sb_publishable_iq3dMg7U6zVz8vP6oSERYQ_nlXh7J_7";
 
-// Alterado de 'supabase' para 'supabaseClient' para evitar conflito
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // VARIÁVEIS GLOBAIS DE ESTADO
@@ -83,10 +82,13 @@ async function handleLogin(e) {
   const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: senha });
 
   if (error) {
-    alert("Falha no login: " + error.message);
+    if (error.message.includes("Invalid login credentials")) {
+      alert("Erro no login! Credencial inválida!");
+    } else {
+      alert("Erro no login: " + error.message);
+    }
     return;
   }
-
   usuarioLogado = data.user;
   await carregarPerfilEIniciar();
 }
@@ -196,14 +198,35 @@ function atualizarValores() {
   }
 }
 
+// MOSTRAR/OCULTAR CHAVE PIX COM RADIO BUTTON
+function togglePixInfo() {
+  const radioSelecionado = document.querySelector('input[name="forma_pagamento"]:checked');
+  const boxPix = document.getElementById("box-pix");
+  
+  if (radioSelecionado && radioSelecionado.value === "Pix") {
+    boxPix.classList.remove("hidden");
+  } else {
+    boxPix.classList.add("hidden");
+  }
+}
+
 // REGISTRAR UMA NOVA VENDA
 async function registrarVenda(e) {
   e.preventDefault();
   const select = document.getElementById("select-produto");
   const selectedOpt = select.options[select.selectedIndex];
+  
+  // Obtém o valor do radio button marcado
+  const radioPagamento = document.querySelector('input[name="forma_pagamento"]:checked');
+  const formaPagamento = radioPagamento ? radioPagamento.value : null;
 
   if (!selectedOpt || !selectedOpt.value) {
     alert("Selecione um produto válido!");
+    return;
+  }
+
+  if (!formaPagamento) {
+    alert("Selecione a forma de pagamento!");
     return;
   }
 
@@ -225,6 +248,7 @@ async function registrarVenda(e) {
     quantidade: quantidade,
     valor_unitario: valorUnitario,
     valor_total: valorTotal,
+    forma_pagamento: formaPagamento,
     vendedor_email: perfilUsuario.nome
   };
 
@@ -238,6 +262,7 @@ async function registrarVenda(e) {
   } else {
     alert("Venda realizada com sucesso!");
     document.getElementById("form-venda").reset();
+    togglePixInfo();
     atualizarValores();
   }
 }
@@ -270,7 +295,7 @@ async function carregarRelatorioDiario() {
   tabelaCorpo.innerHTML = "";
 
   if (vendas.length === 0) {
-    tabelaCorpo.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhuma venda registrada nesta data.</td></tr>';
+    tabelaCorpo.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhuma venda registrada nesta data.</td></tr>';
   }
 
   vendas.forEach(v => {
@@ -291,6 +316,7 @@ async function carregarRelatorioDiario() {
       <td>${v.quantidade}</td>
       <td>R$ ${parseFloat(v.valor_unitario).toFixed(2)}</td>
       <td><strong>R$ ${parseFloat(v.valor_total).toFixed(2)}</strong></td>
+      <td><span class="badge-pagamento">${v.forma_pagamento || 'Não informado'}</span></td>
       <td>${v.vendedor_email}</td>
     `;
     tabelaCorpo.appendChild(tr);
@@ -313,46 +339,38 @@ async function carregarRelatorioDiario() {
     }
   }
 }
+
 /* =========================================================
    PROTEÇÃO DE TELA: BLOQUEIO DE BOTÃO DIREITO E ATALHOS F12
    ========================================================= */
 
-// Bloqueia o menu de contexto (Botão Direito do Mouse)
 document.addEventListener("contextmenu", (e) => {
   e.preventDefault();
   return false;
 });
 
-// Bloqueia teclas de atalho do navegador (F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U, Ctrl+S)
 document.addEventListener("keydown", (e) => {
-  // Tecla F12
   if (e.keyCode === 123 || e.key === "F12") {
     e.preventDefault();
     return false;
   }
 
-  // Ctrl + Shift + I (Inspecionar)
-  // Ctrl + Shift + J (Console)
-  // Ctrl + Shift + C (Selecionar Elemento)
   if (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67 || e.key === 'I' || e.key === 'J' || e.key === 'C')) {
     e.preventDefault();
     return false;
   }
 
-  // Ctrl + U (Exibir código-fonte) e Ctrl + S (Salvar página)
   if (e.ctrlKey && (e.keyCode === 85 || e.keyCode === 83 || e.key === 'u' || e.key === 's')) {
     e.preventDefault();
     return false;
   }
 });
 
-// Anti-Debugging: Trava a execução se alguém conseguir abrir o Console do DevTools
 setInterval(() => {
   const antes = performance.now();
   debugger;
   const depois = performance.now();
   if (depois - antes > 100) {
-    // Se o DevTools estiver aberto, recarrega ou limpa a tela
     window.location.reload();
   }
 }, 1000);
