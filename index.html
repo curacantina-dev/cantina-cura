@@ -85,28 +85,27 @@
               </select>
             </div>
 
-            <!-- FORMA DE PAGAMENTO EM RADIO BUTTONS -->
             <div class="form-group">
-              <label>3. Forma de Pagamento:</label>
-              <div class="radio-group" onchange="togglePixInfo()">
-                <label class="radio-option">
-                  <input type="radio" name="forma_pagamento" value="Pix" required>
-                  <span>Pix</span>
-                </label>
-                <label class="radio-option">
-                  <input type="radio" name="forma_pagamento" value="Dinheiro">
-                  <span>Dinheiro</span>
-                </label>
-                <label class="radio-option">
-                  <input type="radio" name="forma_pagamento" value="Cartão de Débito">
-                  <span>Cartão de Débito</span>
-                </label>
-                <label class="radio-option">
-                  <input type="radio" name="forma_pagamento" value="Cartão de Crédito">
-                  <span>Cartão de Crédito</span>
-                </label>
-              </div>
-            </div>
+  <label>3. Forma de Pagamento:</label>
+  <div class="radio-group" onchange="togglePixInfo()">
+    <label class="radio-option">
+      <input type="radio" name="forma_pagamento" value="Pix" required>
+      <span>Pix</span>
+    </label>
+    <label class="radio-option">
+      <input type="radio" name="forma_pagamento" value="Dinheiro">
+      <span>Dinheiro</span>
+    </label>
+    <label class="radio-option">
+      <input type="radio" name="forma_pagamento" value="Cartão de Débito">
+      <span>Cartão de Débito</span>
+    </label>
+    <label class="radio-option">
+      <input type="radio" name="forma_pagamento" value="Cartão de Crédito">
+      <span>Cartão de Crédito</span>
+    </label>
+  </div>
+</div>
 
             <!-- CAIXA INFORMATIVA DO PIX -->
             <div id="box-pix" class="pix-info hidden">
@@ -135,60 +134,76 @@
         </div>
       </section>
 
-      <!-- ABA 2: RELATÓRIO DIÁRIO (EXCLUSIVO PARA GERENTE) -->
-      <section id="aba-relatorio" class="tab-content hidden">
-        <div class="header-relatorio">
-          <h2>📊 Relatório de Vendas do Dia</h2>
-          <input type="date" id="filtro-data" onchange="carregarRelatorioDiario()">
-        </div>
+<!-- ABA 2: RELATÓRIO DIÁRIO (EXCLUSIVO PARA GERENTE) -->
+<section id="aba-relatorio" class="tab-content hidden">
+  <div class="header-relatorio">
+    <h2>📊 Relatório de Vendas do Dia</h2>
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+      <input type="date" id="filtro-data" onchange="carregarRelatorioDiario()">
+      <!-- FILTRO DE VENDEDORES -->
+      <select id="filtro-vendedor" onchange="carregarRelatorioDiario()">
+        <option value="todos">Todos os Vendedores</option>
+      </select>
+    </div>
+  </div>
 
-        <!-- CARDS DE RESUMO -->
-        <div class="kpi-grid">
-          <div class="kpi-card">
-            <h3>Faturamento Total</h3>
-            <p id="kpi-faturamento">R$ 0,00</p>
-          </div>
-          <div class="kpi-card">
-            <h3>Qtd. Itens Vendidos</h3>
-            <p id="kpi-itens">0</p>
-          </div>
-          <div class="kpi-card">
-            <h3>Total de Transações</h3>
-            <p id="kpi-vendas">0</p>
-          </div>
-        </div>
+  <!-- CARDS DE RESUMO -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <h3>Faturamento Total</h3>
+      <p id="kpi-faturamento">R$ 0,00</p>
+    </div>
+    <div class="kpi-card">
+      <h3>Qtd. Itens Vendidos</h3>
+      <p id="kpi-itens">0</p>
+    </div>
+    <div class="kpi-card">
+      <h3>Total de Transações</h3>
+      <p id="kpi-vendas">0</p>
+    </div>
+  </div>
 
-        <!-- RESUMO POR VENDEDOR -->
-        <div class="card">
-          <h3>Vendas por Vendedor</h3>
-          <ul id="lista-vendedores" class="vendedores-list">
-            <li>Carregando...</li>
-          </ul>
-        </div>
+  <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+    <!-- DASHBOARD: PRODUTOS MAIS VENDIDOS -->
+    <div class="card">
+      <h3>🏆 Top 5 Produtos Mais Vendidos</h3>
+      <ul id="lista-top-produtos" class="vendedores-list">
+        <li>Carregando...</li>
+      </ul>
+    </div>
 
-        <!-- TABELA DE VENDAS DO DIA -->
-        <div class="card">
-          <h3>Histórico de Vendas</h3>
-          <div class="table-responsive">
-            <table>
-              <thead>
-                <tr>
-                  <th>Horário</th>
-                  <th>Item</th>
-                  <th>Qtd</th>
-                  <th>Valor Unit.</th>
-                  <th>Total</th>
-                  <th>Pagamento</th>
-                  <th>Vendedor</th>
-                </tr>
-              </thead>
-              <tbody id="tabela-vendas-corpo">
-                <tr><td colspan="7">Carregando relatório...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
+    <!-- RESUMO POR VENDEDOR -->
+    <div class="card">
+      <h3>👥 Vendas por Vendedor</h3>
+      <ul id="lista-vendedores" class="vendedores-list">
+        <li>Carregando...</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- TABELA DE VENDAS DO DIA -->
+  <div class="card">
+    <h3>Histórico de Vendas</h3>
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Horário</th>
+            <th>Item</th>
+            <th>Qtd</th>
+            <th>Valor Unit.</th>
+            <th>Total</th>
+            <th>Pagamento</th>
+            <th>Vendedor</th>
+          </tr>
+        </thead>
+        <tbody id="tabela-vendas-corpo">
+          <tr><td colspan="7">Carregando relatório...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
 
     </main>
   </div>
