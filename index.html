@@ -11,46 +11,32 @@
 <body>
 
   <!-- TELA DE AUTENTICAÇÃO (LOGIN / CADASTRO) -->
-<div id="auth-container" class="auth-container">
-  <div class="auth-card">
-    <div class="logo">
-      <img src="./logo_cura.png" alt="Logo CURA Cantina" class="logo-img">
-      <h1>CURA - Cantina</h1>
-    </div>
-    
-    <!-- FORMULÁRIO DE LOGIN -->
-    <form id="form-login" onsubmit="handleLogin(event)">
-      <center><h2>Entrar no Sistema</h2></center>
-      <input type="email" id="login-email" placeholder="Seu E-mail" required>
-      <input type="password" id="login-senha" placeholder="Sua Senha" required>
-      <button type="submit" class="btn btn-primary">Entrar</button>
-      <p class="auth-toggle">Não tem uma conta? <a href="javascript:void(0)" onclick="toggleAuth('cadastro')">Cadastre-se</a></p>
-    </form>
-
-    <!-- FORMULÁRIO DE CADASTRO (FICA ESCONDIDO ATÉ O CLIQUE) -->
-    <form id="form-cadastro" class="hidden" onsubmit="handleCadastro(event)">
-      <center><h2>Criar Nova Conta</h2></center>
-      <input type="text" id="cad-nome" placeholder="Seu Nome Completo" required>
-      <input type="email" id="cad-email" placeholder="Seu E-mail" required>
-      <input type="password" id="cad-senha" placeholder="Sua Senha (mín. 6 caracteres)" minlength="6" required>
-      <input type="password" id="cad-codigo" placeholder="Código de Gerente (opcional)">
-      <small class="hint">Se você possui o código de gerente, insira acima. Caso contrário, sua conta será de Vendedor.</small>
-      <button type="submit" class="btn btn-success">Cadastrar</button>
-      <p class="auth-toggle">Já tem conta? <a href="javascript:void(0)" onclick="toggleAuth('login')">Fazer Login</a></p>
-    </form>
-  </div>
-</div>
+  <div id="auth-container" class="auth-container">
+    <div class="auth-card">
+      <div class="logo">
+        <img src="img/logo_cura.png" alt="Logo CURA Cantina" class="logo-img">
+        <h1>CURA - Cantina</h1>
+      </div>
+      
+      <!-- FORMULÁRIO DE LOGIN -->
+      <form id="form-login" onsubmit="handleLogin(event)">
+        <center><h2>Entrar no Sistema</h2></center>
+        <input type="email" id="login-email" placeholder="Seu E-mail" required>
+        <input type="password" id="login-senha" placeholder="Sua Senha" required>
+        <button type="submit" class="btn btn-primary">Entrar</button>
+        <p class="auth-toggle">Não tem uma conta? <a href="javascript:void(0)" onclick="toggleAuth('cadastro')">Cadastre-se</a></p>
+      </form>
 
       <!-- FORMULÁRIO DE CADASTRO -->
       <form id="form-cadastro" class="hidden" onsubmit="handleCadastro(event)">
-        <h2>Criar Nova Conta</h2>
+        <center><h2>Criar Nova Conta</h2></center>
         <input type="text" id="cad-nome" placeholder="Seu Nome Completo" required>
         <input type="email" id="cad-email" placeholder="Seu E-mail" required>
         <input type="password" id="cad-senha" placeholder="Sua Senha (mín. 6 caracteres)" minlength="6" required>
         <input type="password" id="cad-codigo" placeholder="Código de Gerente (opcional)">
-        <small class="hint">Se você possui a chave de gerente, insira acima. Caso contrário, sua conta será de Vendedor.</small>
+        <small class="hint">Se você possui o código de gerente, insira acima. Caso contrário, sua conta será de Vendedor.</small>
         <button type="submit" class="btn btn-success">Cadastrar</button>
-        <p class="auth-toggle">Já tem conta? <a href="#" onclick="toggleAuth('login')">Fazer Login</a></p>
+        <p class="auth-toggle">Já tem conta? <a href="javascript:void(0)" onclick="toggleAuth('login')">Fazer Login</a></p>
       </form>
     </div>
   </div>
@@ -97,6 +83,33 @@
               <select id="select-produto" required onchange="atualizarValores()">
                 <option value="">Carregando produtos...</option>
               </select>
+            </div>
+
+            <div class="form-group">
+  <label>3. Forma de Pagamento:</label>
+  <div class="radio-group" onchange="togglePixInfo()">
+    <label class="radio-option">
+      <input type="radio" name="forma_pagamento" value="Pix" required>
+      <span>Pix</span>
+    </label>
+    <label class="radio-option">
+      <input type="radio" name="forma_pagamento" value="Dinheiro">
+      <span>Dinheiro</span>
+    </label>
+    <label class="radio-option">
+      <input type="radio" name="forma_pagamento" value="Cartão de Débito">
+      <span>Cartão de Débito</span>
+    </label>
+    <label class="radio-option">
+      <input type="radio" name="forma_pagamento" value="Cartão de Crédito">
+      <span>Cartão de Crédito</span>
+    </label>
+  </div>
+</div>
+
+            <!-- CAIXA INFORMATIVA DO PIX -->
+            <div id="box-pix" class="pix-info hidden">
+              📌 <strong>Chave Pix (E-mail):</strong> <span>danilojtlobo@hotmail.com</span>
             </div>
 
             <div class="form-grid">
@@ -164,11 +177,12 @@
                   <th>Qtd</th>
                   <th>Valor Unit.</th>
                   <th>Total</th>
+                  <th>Pagamento</th>
                   <th>Vendedor</th>
                 </tr>
               </thead>
               <tbody id="tabela-vendas-corpo">
-                <tr><td colspan="6">Carregando relatório...</td></tr>
+                <tr><td colspan="7">Carregando relatório...</td></tr>
               </tbody>
             </table>
           </div>
