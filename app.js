@@ -267,20 +267,50 @@ async function registrarVenda(e) {
   }
 }
 
+// CARREGAR OPÇÕES DE VENDEDORES NO FILTRO
+async function carregarOpcoesVendedores() {
+  const select = document.getElementById("filtro-vendedor");
+  if (!select || select.options.length > 1) return;
+
+  const { data: perfis, error } = await supabaseClient
+    .from("perfis")
+    .select("nome")
+    .order("nome");
+
+  if (error || !perfis) return;
+
+  perfis.forEach(p => {
+    const opt = document.createElement("option");
+    opt.value = p.nome;
+    opt.innerText = p.nome;
+    select.appendChild(opt);
+  });
+}
+
 // CARREGAR RELATÓRIO DIÁRIO
 async function carregarRelatorioDiario() {
   const dataSelecionada = document.getElementById("filtro-data").value;
+  const filtroVendedorEl = document.getElementById("filtro-vendedor");
+  const vendedorSelecionado = filtroVendedorEl ? filtroVendedorEl.value : "todos";
+
   if (!dataSelecionada) return;
+
+  await carregarOpcoesVendedores();
 
   const inicioDia = `${dataSelecionada}T00:00:00.000Z`;
   const fimDia = `${dataSelecionada}T23:59:59.999Z`;
 
-  const { data: vendas, error } = await supabaseClient
+  let query = supabaseClient
     .from("vendas")
     .select("*")
     .gte("data_venda", inicioDia)
-    .lte("data_venda", fimDia)
-    .order("data_venda", { ascending: false });
+    .lte("data_venda", fimDia);
+
+  if (vendedorSelecionado && vendedorSelecionado !== "todos") {
+    query = query.eq("vendedor_email", vendedorSelecionado);
+  }
+
+  const { data: vendas, error } = await query.order("data_venda", { ascending: false });
 
   if (error) {
     console.error("Erro ao carregar relatórios:", error);
@@ -290,6 +320,7 @@ async function carregarRelatorioDiario() {
   let faturamentoTotal = 0;
   let totalItens = 0;
   const vendasPorVendedor = {};
+  const vendasPorProduto = {};
 
   const tabelaCorpo = document.getElementById("tabela-vendas-corpo");
   tabelaCorpo.innerHTML = "";
@@ -302,10 +333,18 @@ async function carregarRelatorioDiario() {
     faturamentoTotal += parseFloat(v.valor_total);
     totalItens += v.quantidade;
 
+    // Vendas por Vendedor
     if (!vendasPorVendedor[v.vendedor_email]) {
       vendasPorVendedor[v.vendedor_email] = 0;
     }
     vendasPorVendedor[v.vendedor_email] += parseFloat(v.valor_total);
+
+    // Vendas por Produto
+    if (!vendasPorProduto[v.nome_produto]) {
+      vendasPorProduto[v.nome_produto] = { quantidade: 0, total: 0 };
+    }
+    vendasPorProduto[v.nome_produto].quantidade += v.quantidade;
+    vendasPorProduto[v.nome_produto].total += parseFloat(v.valor_total);
 
     const hora = new Date(v.data_venda).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
@@ -326,16 +365,37 @@ async function carregarRelatorioDiario() {
   document.getElementById("kpi-itens").innerText = totalItens;
   document.getElementById("kpi-vendas").innerText = vendas.length;
 
+  // Renderiza Vendas por Vendedor
   const listaVendEl = document.getElementById("lista-vendedores");
-  listaVendEl.innerHTML = "";
-  
-  if (Object.keys(vendasPorVendedor).length === 0) {
-    listaVendEl.innerHTML = "<li>Nenhum registro.</li>";
-  } else {
-    for (const [vendedor, valor] of Object.entries(vendasPorVendedor)) {
-      const li = document.createElement("li");
-      li.innerHTML = `<span>👤 ${vendedor}</span> <strong>R$ ${valor.toFixed(2)}</strong>`;
-      listaVendEl.appendChild(li);
+  if (listaVendEl) {
+    listaVendEl.innerHTML = "";
+    if (Object.keys(vendasPorVendedor).length === 0) {
+      listaVendEl.innerHTML = "<li>Nenhum registro.</li>";
+    } else {
+      for (const [vendedor, valor] of Object.entries(vendasPorVendedor)) {
+        const li = document.createElement("li");
+        li.innerHTML = `<span>👤 ${vendedor}</span> <strong>R$ ${valor.toFixed(2)}</strong>`;
+        listaVendEl.appendChild(li);
+      }
+    }
+  }
+
+  // Renderiza Top 5 Produtos Mais Vendidos
+  const listaTopProdEl = document.getElementById("lista-top-produtos");
+  if (listaTopProdEl) {
+    listaTopProdEl.innerHTML = "";
+    const produtosOrdenados = Object.entries(vendasPorProduto)
+      .sort((a, b) => b[1].quantidade - a[1].quantidade)
+      .slice(0, 5);
+
+    if (produtosOrdenados.length === 0) {
+      listaTopProdEl.innerHTML = "<li>Nenhum registro.</li>";
+    } else {
+      produtosOrdenados.forEach(([nome, dados], index) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<span>${index + 1}º ${nome} (${dados.quantidade} un)</span> <strong>R$ ${dados.total.toFixed(2)}</strong>`;
+        listaTopProdEl.appendChild(li);
+      });
     }
   }
 }
