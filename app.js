@@ -210,15 +210,35 @@ function togglePixInfo() {
   }
 }
 
+// MOSTRAR/OCULTAR CAMPO NOME DO CLIENTE QUANDO "PAGAR DEPOIS" FOR SELECIONADO
+function toggleNomeCliente() {
+  const radioStatus = document.querySelector('input[name="status_pagamento"]:checked');
+  const boxNome = document.getElementById("box-nome-cliente");
+  const inputNome = document.getElementById("input-nome-cliente");
+
+  if (radioStatus && radioStatus.value === "Pendente") {
+    boxNome.classList.remove("hidden");
+  } else {
+    boxNome.classList.add("hidden");
+    if (inputNome) inputNome.value = "";
+  }
+}
+
 // REGISTRAR UMA NOVA VENDA
 async function registrarVenda(e) {
   e.preventDefault();
   const select = document.getElementById("select-produto");
   const selectedOpt = select.options[select.selectedIndex];
   
-  // Obtém o valor do radio button marcado
+  // Obtém a forma de pagamento
   const radioPagamento = document.querySelector('input[name="forma_pagamento"]:checked');
   const formaPagamento = radioPagamento ? radioPagamento.value : null;
+
+  // Obtém o status do pagamento e nome do cliente
+  const radioStatus = document.querySelector('input[name="status_pagamento"]:checked');
+  const statusPagamento = radioStatus ? radioStatus.value : "Pago";
+  const inputNomeEl = document.getElementById("input-nome-cliente");
+  const nomeCliente = inputNomeEl ? inputNomeEl.value.trim() : "";
 
   if (!selectedOpt || !selectedOpt.value) {
     alert("Selecione um produto válido!");
@@ -227,6 +247,11 @@ async function registrarVenda(e) {
 
   if (!formaPagamento) {
     alert("Selecione a forma de pagamento!");
+    return;
+  }
+
+  if (statusPagamento === "Pendente" && !nomeCliente) {
+    alert("Por favor, digite o nome de quem vai pagar depois!");
     return;
   }
 
@@ -249,6 +274,8 @@ async function registrarVenda(e) {
     valor_unitario: valorUnitario,
     valor_total: valorTotal,
     forma_pagamento: formaPagamento,
+    status_pagamento: statusPagamento,
+    nome_cliente: statusPagamento === "Pendente" ? nomeCliente : null,
     vendedor_email: perfilUsuario.nome
   };
 
@@ -263,6 +290,7 @@ async function registrarVenda(e) {
     alert("Venda realizada com sucesso!");
     document.getElementById("form-venda").reset();
     togglePixInfo();
+    toggleNomeCliente();
     atualizarValores();
   }
 }
@@ -348,6 +376,10 @@ async function carregarRelatorioDiario() {
 
     const hora = new Date(v.data_venda).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
+    const badgeStatus = v.status_pagamento === 'Pendente' 
+      ? `<span style="background: #ffebee; color: #c62828; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-left: 5px;">A PAGAR (${v.nome_cliente || 'Sem nome'})</span>`
+      : `<span style="background: #e8f5e9; color: #2e7d32; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-left: 5px;">PAGO</span>`;
+
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${hora}</td>
@@ -355,7 +387,7 @@ async function carregarRelatorioDiario() {
       <td>${v.quantidade}</td>
       <td>R$ ${parseFloat(v.valor_unitario).toFixed(2)}</td>
       <td><strong>R$ ${parseFloat(v.valor_total).toFixed(2)}</strong></td>
-      <td><span class="badge-pagamento">${v.forma_pagamento || 'Não informado'}</span></td>
+      <td><span class="badge-pagamento">${v.forma_pagamento || 'Não informado'}</span> ${badgeStatus}</td>
       <td>${v.vendedor_email}</td>
     `;
     tabelaCorpo.appendChild(tr);
