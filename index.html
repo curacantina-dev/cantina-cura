@@ -59,6 +59,7 @@
     <nav id="nav-gerente" class="sub-nav hidden">
       <button class="nav-btn active" onclick="trocarAba('vendas')">🛒 Ponto de Venda</button>
       <button class="nav-btn" onclick="trocarAba('relatorio')">📊 Relatório Diário</button>
+      <button class="nav-btn" onclick="trocarAba('produtos')">📦 Gerenciar Produtos</button>
     </nav>
 
     <main class="main-content">
@@ -69,16 +70,11 @@
           <h2>🛒 Registrar Venda</h2>
           
           <form id="form-venda" onsubmit="registrarVenda(event)">
-           <div class="form-group">
-  <label for="select-categoria">1. Categoria:</label>
-  <select id="select-categoria" onchange="filtrarProdutosPorCategoria()">
-    <option value="todas">Todas as Categorias</option>
-    <option value="salgado">Salgados</option>
-    <option value="doce">Doces</option>
-    <option value="refrigerante">Refrigerantes</option>
-    <option value="combo">Combos</option> <!-- NOVA OPÇÃO ADICIONADA -->
-  </select>
-</div>
+            <div class="form-group">
+              <label for="select-categoria">1. Categoria:</label>
+              <select id="select-categoria" onchange="filtrarProdutosPorCategoria()">
+                <option value="todas">Todas as Categorias</option>
+              </select>
             </div>
 
             <div class="form-group">
@@ -161,17 +157,15 @@
       <!-- ABA 2: RELATÓRIO DIÁRIO (EXCLUSIVO PARA GERENTE) -->
       <section id="aba-relatorio" class="tab-content hidden">
         <div class="header-relatorio">
-          <h2>Relatório de Vendas do Dia</h2>
+          <h2>📊 Relatório de Vendas do Dia</h2>
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
             <input type="date" id="filtro-data" onchange="carregarRelatorioDiario()">
-            <!-- FILTRO DE VENDEDORES -->
             <select id="filtro-vendedor" onchange="carregarRelatorioDiario()">
               <option value="todos">Todos os Vendedores</option>
             </select>
           </div>
         </div>
 
-        <!-- CARDS DE RESUMO -->
         <div class="kpi-grid">
           <div class="kpi-card">
             <h3>Faturamento Total</h3>
@@ -188,15 +182,13 @@
         </div>
 
         <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
-          <!-- DASHBOARD: PRODUTOS MAIS VENDIDOS -->
           <div class="card">
-            <h3>🏆Top 5 Produtos Mais Vendidos</h3>
+            <h3>🏆 Top 5 Produtos Mais Vendidos</h3>
             <ul id="lista-top-produtos" class="vendedores-list">
               <li>Carregando...</li>
             </ul>
           </div>
 
-          <!-- RESUMO POR VENDEDOR -->
           <div class="card">
             <h3>👥 Vendas por Vendedor</h3>
             <ul id="lista-vendedores" class="vendedores-list">
@@ -205,7 +197,6 @@
           </div>
         </div>
 
-        <!-- TABELA DE VENDAS DO DIA -->
         <div class="card">
           <h3>Histórico de Vendas</h3>
           <div class="table-responsive">
@@ -225,6 +216,61 @@
                 <tr><td colspan="7" style="text-align: center;">Carregando relatório...</td></tr>
               </tbody>
               <tfoot id="tabela-vendas-rodape"></tfoot>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ABA 3: GESTÃO DE PRODUTOS (EXCLUSIVO PARA GERENTE) -->
+      <section id="aba-produtos" class="tab-content hidden">
+        <div class="card">
+          <h2 id="titulo-form-produto">📦 Cadastrar / Editar Produto</h2>
+          <form id="form-produto" onsubmit="salvarProduto(event)">
+            <input type="hidden" id="prod-id">
+            
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="prod-nome">Nome do Produto:</label>
+                <input type="text" id="prod-nome" placeholder="Ex: Pastel de Carne" required>
+              </div>
+
+              <div class="form-group">
+                <label for="prod-categoria">Categoria:</label>
+                <input type="text" id="prod-categoria" list="lista-sugestao-categorias" placeholder="Digite ou escolha uma categoria" required>
+                <datalist id="lista-sugestao-categorias"></datalist>
+                <small class="hint">Você pode escolher uma existente ou digitar uma nova categoria.</small>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="prod-preco">Preço Unitário (R$):</label>
+                <input type="number" id="prod-preco" step="0.01" min="0.01" placeholder="0.00" required>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+              <button type="submit" id="btn-salvar-produto" class="btn btn-success">Salvar Produto</button>
+              <button type="button" id="btn-cancelar-edicao" class="btn btn-secondary hidden" onclick="limparFormularioProduto()">Cancelar Edição</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <h3>📋 Catálogo de Produtos</h3>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Categoria</th>
+                  <th>Preço Unitário</th>
+                  <th style="text-align: center;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tabela-produtos-gerente-corpo">
+                <tr><td colspan="4" style="text-align: center;">Carregando produtos...</td></tr>
+              </tbody>
             </table>
           </div>
         </div>
