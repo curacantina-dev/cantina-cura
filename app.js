@@ -140,33 +140,66 @@ function trocarAba(aba) {
 
   if (aba === "vendas") {
     document.getElementById("aba-vendas").classList.remove("hidden");
-    event.target.classList.add("active");
+    if (event) event.target.classList.add("active");
   } else if (aba === "relatorio") {
     document.getElementById("aba-relatorio").classList.remove("hidden");
-    event.target.classList.add("active");
+    if (event) event.target.classList.add("active");
     carregarRelatorioDiario();
+  } else if (aba === "produtos") {
+    document.getElementById("aba-produtos").classList.remove("hidden");
+    if (event) event.target.classList.add("active");
+    carregarTabelaProdutosGerente();
   }
 }
 
-// NAVEGAÇÃO / LOGICA DE VENDAS
+// DADOS DE PRODUTOS E CATEGORIAS DINÂMICAS
 async function carregarProdutos() {
   const { data, error } = await supabaseClient.from("produtos").select("*").order("nome");
   if (error) {
     alert("Erro ao carregar produtos: " + error.message);
     return;
   }
-  listaProdutos = data;
+  listaProdutos = data || [];
+  atualizarFiltroCategorias();
   filtrarProdutosPorCategoria();
 }
 
+// ATUALIZA OS DROPDOWNS E SUGESTÕES DE CATEGORIA DINAMICAMENTE
+function atualizarFiltroCategorias() {
+  const selectCat = document.getElementById("select-categoria");
+  const datalistCat = document.getElementById("lista-sugestao-categorias");
+  
+  if (!selectCat) return;
+
+  const categoriasUnicas = [...new Set(listaProdutos.map(p => p.categoria?.toLowerCase()).filter(Boolean))].sort();
+
+  selectCat.innerHTML = '<option value="todas">Todas as Categorias</option>';
+  if (datalistCat) datalistCat.innerHTML = "";
+
+  categoriasUnicas.forEach(cat => {
+    const nomeFormatado = cat.charAt(0).toUpperCase() + cat.slice(1);
+    
+    const optSelect = document.createElement("option");
+    optSelect.value = cat;
+    optSelect.innerText = nomeFormatado;
+    selectCat.appendChild(optSelect);
+
+    if (datalistCat) {
+      const optData = document.createElement("option");
+      optData.value = cat;
+      datalistCat.appendChild(optData);
+    }
+  });
+}
+
 function filtrarProdutosPorCategoria() {
-  const categoria = document.getElementById("select-categoria").value;
+  const categoria = document.getElementById("select-categoria").value.toLowerCase();
   const selectProduto = document.getElementById("select-produto");
   selectProduto.innerHTML = '<option value="">Selecione um item...</option>';
 
   const filtrados = (categoria === "todas") 
     ? listaProdutos 
-    : listaProdutos.filter(p => p.categoria === categoria);
+    : listaProdutos.filter(p => (p.categoria || "").toLowerCase() === categoria);
 
   filtrados.forEach(prod => {
     const opt = document.createElement("option");
@@ -198,7 +231,7 @@ function atualizarValores() {
   }
 }
 
-// MOSTRAR/OCULTAR CHAVE PIX COM RADIO BUTTON
+// MOSTRAR/OCULTAR CHAVE PIX
 function togglePixInfo() {
   const radioSelecionado = document.querySelector('input[name="forma_pagamento"]:checked');
   const boxPix = document.getElementById("box-pix");
@@ -210,7 +243,7 @@ function togglePixInfo() {
   }
 }
 
-// MOSTRAR/OCULTAR CAMPO NOME DO CLIENTE QUANDO "PAGAR DEPOIS" FOR SELECIONADO
+// MOSTRAR/OCULTAR CAMPO NOME DO CLIENTE (PAGAR DEPOIS)
 function toggleNomeCliente() {
   const radioStatus = document.querySelector('input[name="status_pagamento"]:checked');
   const boxNome = document.getElementById("box-nome-cliente");
@@ -230,11 +263,9 @@ async function registrarVenda(e) {
   const select = document.getElementById("select-produto");
   const selectedOpt = select.options[select.selectedIndex];
   
-  // Obtém a forma de pagamento
   const radioPagamento = document.querySelector('input[name="forma_pagamento"]:checked');
   const formaPagamento = radioPagamento ? radioPagamento.value : null;
 
-  // Obtém o status do pagamento e nome do cliente
   const radioStatus = document.querySelector('input[name="status_pagamento"]:checked');
   const statusPagamento = radioStatus ? radioStatus.value : "Pago";
   const inputNomeEl = document.getElementById("input-nome-cliente");
@@ -292,6 +323,124 @@ async function registrarVenda(e) {
     togglePixInfo();
     toggleNomeCliente();
     atualizarValores();
+  }
+}
+
+/* =========================================================
+   MÓDULO DE GESTÃO DE PRODUTOS E CATEGORIAS (GERENTE)
+   ========================================================= */
+
+// CARREGAR TABELA DO GERENTE
+function carregarTabelaProdutosGerente() {
+  const tabelaCorpo = document.getElementById("tabela-produtos-gerente-corpo");
+  if (!tabelaCorpo) return;
+
+  tabelaCorpo.innerHTML = "";
+
+  if (listaProdutos.length === 0) {
+    tabelaCorpo.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhum produto cadastrado.</td></tr>';
+    return;
+  }
+
+  listaProdutos.forEach(prod => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><strong>${prod.nome}</strong></td>
+      <td><span class="badge-pagamento">${prod.categoria}</span></td>
+      <td>R$ ${parseFloat(prod.preco_unitario).toFixed(2)}</td>
+      <td style="text-align: center;">
+        <button class="btn btn-sm btn-edit" onclick="prepararEdicaoProduto('${prod.id}')">✏️ Editar</button>
+        <button class="btn btn-sm btn-danger" onclick="excluirProduto('${prod.id}')">🗑️ Excluir</button>
+      </td>
+    `;
+    tabelaCorpo.appendChild(tr);
+  });
+}
+
+// CADASTRAR OU ATUALIZAR PRODUTO
+async function salvarProduto(e) {
+  e.preventDefault();
+  const id = document.getElementById("prod-id").value;
+  const nome = document.getElementById("prod-nome").value.trim();
+  const categoria = document.getElementById("prod-categoria").value.trim().toLowerCase();
+  const preco = parseFloat(document.getElementById("prod-preco").value);
+
+  if (!nome || !categoria || isNaN(preco)) {
+    alert("Preencha todos os campos corretamente!");
+    return;
+  }
+
+  const btn = document.getElementById("btn-salvar-produto");
+  btn.disabled = true;
+  btn.innerText = "Salvando...";
+
+  let resError = null;
+
+  if (id) {
+    const { error } = await supabaseClient
+      .from("produtos")
+      .update({ nome, categoria, preco_unitario: preco })
+      .eq("id", id);
+    resError = error;
+  } else {
+    const { error } = await supabaseClient
+      .from("produtos")
+      .insert([{ nome, categoria, preco_unitario: preco }]);
+    resError = error;
+  }
+
+  btn.disabled = false;
+  btn.innerText = "Salvar Produto";
+
+  if (resError) {
+    alert("Erro ao salvar produto: " + resError.message);
+  } else {
+    alert(id ? "Produto atualizado com sucesso!" : "Produto cadastrado com sucesso!");
+    limparFormularioProduto();
+    await carregarProdutos();
+    carregarTabelaProdutosGerente();
+  }
+}
+
+// PREPARAR FORMULÁRIO PARA EDIÇÃO
+function prepararEdicaoProduto(id) {
+  const prod = listaProdutos.find(p => p.id === id);
+  if (!prod) return;
+
+  document.getElementById("prod-id").value = prod.id;
+  document.getElementById("prod-nome").value = prod.nome;
+  document.getElementById("prod-categoria").value = prod.categoria;
+  document.getElementById("prod-preco").value = prod.preco_unitario;
+
+  document.getElementById("titulo-form-produto").innerText = "✏️ Editar Produto";
+  document.getElementById("btn-salvar-produto").innerText = "Atualizar Produto";
+  document.getElementById("btn-cancelar-edicao").classList.remove("hidden");
+}
+
+// LIMPAR FORMULÁRIO DE PRODUTO
+function limparFormularioProduto() {
+  document.getElementById("form-produto").reset();
+  document.getElementById("prod-id").value = "";
+  document.getElementById("titulo-form-produto").innerText = "📦 Cadastrar / Editar Produto";
+  document.getElementById("btn-salvar-produto").innerText = "Salvar Produto";
+  document.getElementById("btn-cancelar-edicao").classList.add("hidden");
+}
+
+// EXCLUIR PRODUTO
+async function excluirProduto(id) {
+  const prod = listaProdutos.find(p => p.id === id);
+  const confirmacao = confirm(`Tem certeza que deseja excluir o produto "${prod?.nome}"?`);
+
+  if (!confirmacao) return;
+
+  const { error } = await supabaseClient.from("produtos").delete().eq("id", id);
+
+  if (error) {
+    alert("Erro ao excluir produto: " + error.message);
+  } else {
+    alert("Produto excluído com sucesso!");
+    await carregarProdutos();
+    carregarTabelaProdutosGerente();
   }
 }
 
@@ -361,13 +510,11 @@ async function carregarRelatorioDiario() {
     faturamentoTotal += parseFloat(v.valor_total);
     totalItens += v.quantidade;
 
-    // Vendas por Vendedor
     if (!vendasPorVendedor[v.vendedor_email]) {
       vendasPorVendedor[v.vendedor_email] = 0;
     }
     vendasPorVendedor[v.vendedor_email] += parseFloat(v.valor_total);
 
-    // Vendas por Produto
     if (!vendasPorProduto[v.nome_produto]) {
       vendasPorProduto[v.nome_produto] = { quantidade: 0, total: 0 };
     }
@@ -393,12 +540,10 @@ async function carregarRelatorioDiario() {
     tabelaCorpo.appendChild(tr);
   });
 
-  // Atualiza os cards KPI
   document.getElementById("kpi-faturamento").innerText = `R$ ${faturamentoTotal.toFixed(2)}`;
   document.getElementById("kpi-itens").innerText = totalItens;
   document.getElementById("kpi-vendas").innerText = vendas.length;
 
-  // Renderiza o rodapé da tabela com o total do dia
   const tabelaRodape = document.getElementById("tabela-vendas-rodape");
   if (tabelaRodape) {
     if (vendas.length === 0) {
@@ -416,7 +561,6 @@ async function carregarRelatorioDiario() {
     }
   }
 
-  // Renderiza Vendas por Vendedor
   const listaVendEl = document.getElementById("lista-vendedores");
   if (listaVendEl) {
     listaVendEl.innerHTML = "";
@@ -431,7 +575,6 @@ async function carregarRelatorioDiario() {
     }
   }
 
-  // Renderiza Top 5 Produtos Mais Vendidos
   const listaTopProdEl = document.getElementById("lista-top-produtos");
   if (listaTopProdEl) {
     listaTopProdEl.innerHTML = "";
@@ -452,7 +595,7 @@ async function carregarRelatorioDiario() {
 }
 
 /* =========================================================
-   PROTEÇÃO DE TELA: BLOQUEIO DE BOTÃO DIREITO E ATALHOS F12
+   PROTEÇÃO DE TELA
    ========================================================= */
 
 document.addEventListener("contextmenu", (e) => {
